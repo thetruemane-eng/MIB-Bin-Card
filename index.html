@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bin Card — Pharmacy Stock Register</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#4f4c37">
+<link rel="icon" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<style>
+:root{
+  --ink:#1c2321; --paper:#f7f5ef; --paper2:#eeebe1; --rule:#c9c3ac;
+  --accent:#2f5d50; --accent2:#8a6d3b; --danger:#9c3b2f; --ok:#3d6b4a;
+  --mono:Tahoma,Verdana,'Segoe UI',Geneva,sans-serif; --serif:'Book Antiqua','Palatino Linotype',Palatino,Georgia,serif;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;}
+html{scroll-padding-top:env(safe-area-inset-top,0px); height:100%;}
+body{height:100%; margin:0; background:var(--paper); color:var(--ink); font-family:var(--serif); font-size:16.5px; line-height:1.5;}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --ink:#f2f0e8; --paper:#161a18; --paper2:#20251f; --rule:#454d43; --accent:#8fd0b9; --accent2:#e0bd85; --danger:#f4a396; --ok:#a8e6b8; } }
+:root[data-theme="dark"]{ --ink:#f2f0e8; --paper:#161a18; --paper2:#20251f; --rule:#454d43; --accent:#8fd0b9; --accent2:#e0bd85; --danger:#f4a396; --ok:#a8e6b8; }
+header{padding:14px 16px 10px; border-bottom:2px solid var(--ink); display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:6px; top:env(safe-area-inset-top,0px);}
+header h1{font-size:19px; margin:0;}
+header .sub{font-family:var(--mono); font-size:12.5px; color:var(--accent2);}
+#syncStatus{padding:0 16px 8px; font-family:var(--mono); font-size:12.5px;}
+nav{display:flex; overflow-x:auto; border-bottom:1px solid var(--rule); background:var(--paper2);}
+nav button{flex:0 0 auto; background:none; border:none; font-family:var(--serif); font-size:14.5px; font-weight:500; padding:10px 12px; color:var(--ink); opacity:.78; cursor:pointer; border-bottom:2px solid transparent;}
+nav button.active{opacity:1; border-bottom:2px solid var(--accent); font-weight:700;}
+main{padding:16px; max-width:900px; margin:0 auto; padding-bottom:40px;}
+.card{background:var(--paper2); border:1px solid var(--rule); border-radius:3px; padding:14px; margin-bottom:14px;}
+.grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+@media(max-width:480px){.grid{grid-template-columns:1fr;}}
+label{display:block; font-family:var(--mono); font-size:12.5px; color:var(--accent2); margin-bottom:4px; font-weight:600;}
+input,select{width:100%; padding:8px 9px; font-family:var(--serif); font-size:14.5px; border:1px solid var(--rule); border-radius:2px; background:var(--paper); color:var(--ink); margin-bottom:10px;}
+button.btn{background:var(--accent); color:var(--paper); border:none; padding:10px 16px; font-family:var(--serif); font-size:14.5px; border-radius:2px; cursor:pointer;}
+button.btn.secondary{background:none; border:1px solid var(--accent); color:var(--accent);}
+button.btn.danger{background:var(--danger);}
+button.btn:disabled{opacity:.4; cursor:not-allowed;}
+table{width:100%; border-collapse:collapse; font-size:13px;}
+th{text-align:left; font-family:var(--mono); font-size:11.5px; color:var(--accent2); padding:7px 6px; border-bottom:1px solid var(--ink); white-space:nowrap; font-weight:700;}
+td{padding:6px; border-bottom:1px solid var(--rule); vertical-align:top;}
+tr.in td.qty{color:var(--ok);} tr.out td.qty{color:var(--danger);}
+.overflow{overflow-x:auto;}
+.item-row{display:flex; justify-content:space-between; align-items:center; padding:11px 10px; border-bottom:1px solid var(--rule); cursor:pointer; border-left:4px solid var(--rule); margin-bottom:2px; transition:background .1s;}
+.item-row:last-child{border-bottom:none;}
+.item-row:active{background:rgba(0,0,0,.04);}
+.item-row.ok{border-left-color:var(--ok);}
+.item-row.warn{border-left-color:var(--accent2);}
+.item-row.crit{border-left-color:var(--danger);}
+.item-main{flex:1; min-width:0; padding-right:10px;}
+.bar-track{height:5px; background:var(--rule); border-radius:3px; overflow:hidden; margin-top:7px; width:100%; max-width:220px;}
+.bar-fill{height:100%; border-radius:3px;}
+.stats-row{display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;}
+.stat-card{flex:1; min-width:92px; background:var(--paper2); border:1px solid var(--rule); border-left:4px solid var(--accent); border-radius:3px; padding:9px 11px;}
+.stat-card.crit{border-left-color:var(--danger);}
+.stat-card.warn{border-left-color:var(--accent2);}
+.stat-num{font-family:var(--mono); font-size:21px; font-weight:700; line-height:1.1;}
+.stat-label{font-family:var(--mono); font-size:11px; color:var(--accent2); text-transform:uppercase; letter-spacing:.04em; margin-top:3px; font-weight:600;}
+.section-label{font-family:var(--mono); font-size:12px; color:var(--accent2); text-transform:uppercase; letter-spacing:.05em; margin:2px 0 9px; font-weight:700;}
+.item-name{font-size:16.5px; font-weight:600;} .item-meta{font-family:var(--mono); font-size:12px; color:var(--accent2); line-height:1.5;}
+.pill{display:inline-block; padding:3px 8px; border-radius:10px; font-family:var(--mono); font-size:11.5px; margin-left:6px; font-weight:700;}
+.pill.ok{background:rgba(61,107,74,.15); color:var(--ok);}
+.pill.warn{background:rgba(138,109,59,.18); color:var(--accent2);}
+.pill.crit{background:rgba(156,59,47,.18); color:var(--danger);}
+.stock-num{font-family:var(--mono); font-size:18px; font-weight:600;}
+.empty{padding:24px 8px; text-align:center; color:var(--accent2); font-family:var(--mono); font-size:13px;}
+h2{font-size:15.5px; margin:0 0 10px;}
+.hint{font-family:var(--mono); font-size:12px; color:var(--accent2); margin-top:-4px; margin-bottom:10px; line-height:1.5;}
+.btnrow{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;}
+@media print{
+  nav, #syncStatus, header, .no-print{display:none !important;}
+  body{background:#fff; color:#000;}
+  .card{border:1px solid #999; break-inside:avoid;}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>💊 MIB - UAS Bin Card Register</h1>
+  <div style="display:flex; align-items:center; gap:10px;">
+    <div class="sub" id="dateNow"></div>
+    <button id="themeBtn" style="background:none;border:1px solid var(--rule);border-radius:3px;font-size:15px;padding:3px 7px;cursor:pointer;">🎨</button>
+  </div>
+</header>
+<div id="themePanel" class="card no-print" style="display:none; margin:0 16px 10px; max-width:868px;">
+  <div class="section-label">Choose a theme</div>
+  <div class="btnrow" id="themeSwatches"></div>
+</div>
+<div id="syncStatus">connecting…</div>
+<nav id="tabs"></nav>
+<main id="app"></main>
+
+<script>
+let state = {items:[], txns:[], audit:[], roles:[], suggestions:[]};
+let activeTab = 'dashboard';
+let binCardItemId = null;
+let db=null, user=null, downloads=null, sampleApi=null;
+let myId=null, myRole='staff';
+let loaded = {items:false, txns:false, roles:false, audit:false, suggestions:false};
+let syncStatus = 'connecting';
+let profileCache = {};
+
+const TABS_ALL = [
+  {k:'dashboard', l:'Dashboard'}, {k:'items', l:'Items'}, {k:'receive', l:'Receive'},
+  {k:'dispense', l:'Dispense'}, {k:'binCard', l:'Bin Card'}, {k:'suggestions', l:'Suggest'}, {k:'reports', l:'Reports'}, {k:'ask', l:'💬 Ask'},
+  {k:'team', l:'Team', adminOnly:true}
+];
+
+function showModal(message, withCancel){
+  return new Promise(resolve=>{
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
+    overlay.innerHTML = `<div style="background:var(--paper2);border:1px solid var(--rule);border-radius:4px;padding:18px;max-width:320px;font-family:var(--serif);color:var(--ink);box-shadow:0 4px 20px rgba(0,0,0,.3);">
+      <div style="margin-bottom:14px;">${message}</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        ${withCancel?'<button id="modalCancel" class="btn secondary">Cancel</button>':''}
+        <button id="modalOk" class="btn">OK</button>
+      </div></div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#modalOk').onclick = ()=>{ overlay.remove(); resolve(true); };
+    const cb = overlay.querySelector('#modalCancel');
+    if(cb) cb.onclick = ()=>{ overlay.remove(); resolve(false); };
+  });
+}
+function customConfirm(msg){ return showModal(esc(msg), true); }
+function customAlert(msg){ return showModal(esc(msg), false); }
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function esc(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+document.getElementById('dateNow').textContent = new Date().toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
+
+const THEMES = [
+  {name:'System default', system:true},
+  {name:'Apothecary', ink:'#1c2321', paper:'#f7f5ef', paper2:'#eeebe1', rule:'#c9c3ac', accent:'#2f5d50', accent2:'#8a6d3b', danger:'#9c3b2f', ok:'#3d6b4a'},
+  {name:'Half Olive Grey', ink:'#2b2a22', paper:'#b1ab95', paper2:'#9c9680', rule:'#807a64', accent:'#4f4c37', accent2:'#7a5f36', danger:'#8a4636', ok:'#4f6b3f'},
+  {name:'Slate (dark)', ink:'#e6e9ee', paper:'#161a20', paper2:'#1f242c', rule:'#3d4552', accent:'#6f9bd1', accent2:'#c9a768', danger:'#e08a7a', ok:'#8fcf9f'},
+  {name:'Maroon (light)', ink:'#241414', paper:'#f7efe9', paper2:'#efe0d6', rule:'#c9ab9c', accent:'#7a3b3b', accent2:'#8a6d3b', danger:'#9c3b2f', ok:'#3d6b4a'},
+];
+function applyTheme(t){
+  const vars = ['ink','paper','paper2','rule','accent','accent2','danger','ok'];
+  if(t.system){
+    vars.forEach(v=> document.documentElement.style.removeProperty('--'+v));
+  } else {
+    vars.forEach(v=> document.documentElement.style.setProperty('--'+v, t[v]));
+  }
+  document.documentElement.setAttribute('data-theme', t.system ? '' : 'custom');
+  try{ localStorage.setItem('bincard_theme', JSON.stringify(t)); }catch(e){}
+}
+(function initTheme(){
+  try{
+    const saved = JSON.parse(localStorage.getItem('bincard_theme'));
+    if(saved) applyTheme(saved);
+  }catch(e){}
+})();
+document.getElementById('themeBtn').onclick = ()=>{
+  const panel = document.getElementById('themePanel');
+  const swatches = document.getElementById('themeSwatches');
+  if(panel.style.display==='none'){
+    swatches.innerHTML = THEMES.map((t,i)=>`<button class="btn secondary" data-theme-idx="${i}" style="border-color:${t.accent||'var(--accent)'};color:${t.accent||'var(--ink)'};background:${t.paper2||'transparent'};">${t.name}</button>`).join('');
+    swatches.querySelectorAll('[data-theme-idx]').forEach(b=> b.onclick = ()=>{ applyTheme(THEMES[b.dataset.themeIdx]); });
+    panel.style.display='block';
+  } else { panel.style.display='none'; }
+};
+
+let usingLocalFallback = false;
+
+function makeLocalDb(){
+  const listeners = {};
+  function readAll(name){ try{ return JSON.parse(localStorage.getItem('bincard_'+name)||'[]'); }catch(e){ return []; } }
+  function writeAll(name, arr){ try{ localStorage.setItem('bincard_'+name, JSON.stringify(arr)); }catch(e){} notify(name); }
+  function notify(name){ (listeners[name]||[]).forEach(cb=> cb({docs: readAll(name).map(d=>({id:d.id, data:()=>d}))})); }
+  function collection(name){
+    return {
+      onSnapshot(cb){ (listeners[name]=listeners[name]||[]).push(cb); cb({docs: readAll(name).map(d=>({id:d.id, data:()=>d}))}); },
+      add(data){ const arr=readAll(name); const id=uid(); arr.push({id, ...data}); writeAll(name, arr); return Promise.resolve({id}); },
+      doc(id){ return {
+        set(data){ const arr=readAll(name); const i=arr.findIndex(d=>d.id===id); if(i>=0) arr[i]={id,...data}; else arr.push({id,...data}); writeAll(name, arr); return Promise.resolve(); },
+        delete(){ writeAll(name, readAll(name).filter(d=>d.id!==id)); return Promise.resolve(); }
+      };}
+    };
+  }
+  return {collection};
+}
+function makeLocalUser(){
+  let id = localStorage.getItem('bincard_myid');
+  if(!id){ id = 'local-'+uid(); try{ localStorage.setItem('bincard_myid', id); }catch(e){} }
+  return {
+    id: ()=> Promise.resolve(id),
+    profiles: (ids)=> Promise.resolve(Object.fromEntries(ids.map(i=>[i, {name: i===id ? (localStorage.getItem('bincard_myname')||'You') : 'Team member'}])))
+  };
+}
+
+async function init(){
+  const hasClaude = (typeof claude !== 'undefined') && claude && typeof claude.use === 'function';
+  if(hasClaude){
+    try{ db = await claude.use('db'); }catch(e){ db=null; }
+    try{ user = await claude.use('user'); }catch(e){ user=null; }
+    try{ downloads = await claude.use('downloads'); }catch(e){ downloads=null; }
+    try{ sampleApi = await claude.use('sample'); }catch(e){ sampleApi=null; }
+  }
+  if(!db || !user){ db = makeLocalDb(); user = makeLocalUser(); usingLocalFallback = true; }
+  myId = await user.id();
+
+  db.collection('items').onSnapshot(s=>{ state.items = s.docs.map(d=>({id:d.id, ...d.data()})); loaded.items=true; checkSync(); render(); });
+  db.collection('txns').onSnapshot(s=>{ state.txns = s.docs.map(d=>({id:d.id, ...d.data()})); loaded.txns=true; checkSync(); render(); });
+  db.collection('audit').onSnapshot(s=>{ state.audit = s.docs.map(d=>({id:d.id, ...d.data()})); loaded.audit=true; checkSync(); render(); });
+  db.collection('suggestions').onSnapshot(s=>{ state.suggestions = s.docs.map(d=>({id:d.id, ...d.data()})); loaded.suggestions=true; checkSync(); render(); });
+  db.collection('roles').onSnapshot(async s=>{
+    state.roles = s.docs.map(d=>({id:d.id, ...d.data()}));
+    loaded.roles=true;
+    if(state.roles.length===0){
+      await db.collection('roles').doc(myId).set({role:'admin'});
+    } else {
+      const mine = state.roles.find(r=>r.id===myId);
+      if(!mine){ await db.collection('roles').doc(myId).set({role:'staff'}); }
+      else { myRole = mine.role; }
+    }
+    checkSync(); renderNav(); render();
+  });
+}
+function checkSync(){ if(loaded.items&&loaded.txns&&loaded.roles&&loaded.audit&&loaded.suggestions) syncStatus='synced'; }
+
+function logAudit(action, detail){ db.collection('audit').add({ts:new Date().toISOString(), action, detail, by:myId}); }
+
+async function nameOf(id){
+  const custom = state.roles.find(r=>r.id===id)?.nickname;
+  if(custom) return custom;
+  if(profileCache[id]) return profileCache[id];
+  try{ const ps = await user.profiles([id]); const n = ps[id]?.name || 'Someone'; profileCache[id]=n; return n; }
+  catch(e){ return 'Someone'; }
+}
+
+function stockOf(itemId){ return state.txns.filter(t=>t.itemId===itemId).reduce((s,t)=> s + (t.type==='receive'? t.qty : -t.qty), 0); }
+function txnsOf(itemId){ return state.txns.filter(t=>t.itemId===itemId).sort((a,b)=> new Date(a.date)-new Date(b.date)); }
+function avgDailyUsage(itemId){
+  const outs = state.txns.filter(t=>t.itemId===itemId && t.type==='dispense');
+  if(outs.length===0) return 0;
+  const dates = outs.map(t=>new Date(t.date).getTime());
+  const span = Math.max(1, (Math.max(...dates)-Math.min(...dates))/86400000);
+  const total = outs.reduce((s,t)=>s+t.qty,0);
+  return total/Math.max(span,1);
+}
+function suggestedReorder(item){ return Math.ceil(avgDailyUsage(item.id) * (item.leadTimeDays||7)); }
+function effectiveReorder(item){ return (item.reorderPoint!==null && item.reorderPoint!==undefined && item.reorderPoint!=='') ? Number(item.reorderPoint) : suggestedReorder(item); }
+function daysToStockout(item){ const adu=avgDailyUsage(item.id); if(adu<=0) return null; return stockOf(item.id)/adu; }
+function statusOf(item){
+  const stock=stockOf(item.id), rp=effectiveReorder(item), days=daysToStockout(item);
+  if(stock<=0) return 'crit';
+  if(stock<=rp) return 'warn';
+  if(days!==null && days<=7) return 'warn';
+  return 'ok';
+}
+function fmtDays(d){ if(d===null) return '—'; if(d<1) return '<1 day'; return Math.round(d)+' days'; }
+
+// FEFO batch allocation: returns [{txnId, expiry, batch, received, remaining}]
+function batchesOf(itemId){
+  const receives = state.txns.filter(t=>t.itemId===itemId && t.type==='receive')
+    .slice().sort((a,b)=> new Date(a.expiry||'9999-12-31') - new Date(b.expiry||'9999-12-31'));
+  let dispensedLeft = state.txns.filter(t=>t.itemId===itemId && t.type==='dispense').reduce((s,t)=>s+t.qty,0);
+  return receives.map(r=>{
+    const used = Math.min(r.qty, dispensedLeft);
+    dispensedLeft -= used;
+    return {txnId:r.id, expiry:r.expiry||null, batch:r.batch||'', received:r.qty, remaining:r.qty-used, date:r.date};
+  });
+}
+function expiringSoon(days=60){
+  const list=[];
+  state.items.forEach(it=>{
+    batchesOf(it.id).forEach(b=>{
+      if(b.remaining>0 && b.expiry){
+        const d = (new Date(b.expiry)-new Date())/86400000;
+        if(d<=days) list.push({item:it, ...b, daysLeft:d});
+      }
+    });
+  });
+  return list.sort((a,b)=>a.daysLeft-b.daysLeft);
+}
+
+function renderNav(){
+  const nav = document.getElementById('tabs');
+  const tabs = TABS_ALL.filter(t=> !t.adminOnly || myRole==='admin');
+  nav.innerHTML = tabs.map(t=>`<button data-tab="${t.k}" class="${activeTab===t.k?'active':''}">${t.l}</button>`).join('');
+  nav.querySelectorAll('button').forEach(b=> b.onclick = ()=>{ activeTab=b.dataset.tab; render(); });
+}
+
+function render(){
+  renderNav();
+  const statusEl = document.getElementById('syncStatus');
+  statusEl.textContent = usingLocalFallback ? `📱 saved on this device only (not synced) · role: ${myRole}` : syncStatus==='synced' ? `synced across devices · role: ${myRole}` : syncStatus==='connecting' ? 'connecting…' : 'not synced (unavailable)';
+  statusEl.style.color = usingLocalFallback ? 'var(--accent2)' : syncStatus==='synced' ? 'var(--ok)' : syncStatus==='connecting' ? 'var(--accent2)' : 'var(--danger)';
+  const app = document.getElementById('app');
+  if(syncStatus!=='synced' && syncStatus!=='unavailable'){ app.innerHTML = `<div class="card empty">Loading your stock data…</div>`; return; }
+  if(activeTab==='dashboard') app.innerHTML = renderDashboard();
+  else if(activeTab==='items') app.innerHTML = renderItems();
+  else if(activeTab==='receive') app.innerHTML = renderReceive();
+  else if(activeTab==='dispense') app.innerHTML = renderDispense();
+  else if(activeTab==='binCard') app.innerHTML = renderBinCard();
+  else if(activeTab==='suggestions') app.innerHTML = renderSuggestions();
+  else if(activeTab==='reports') app.innerHTML = renderReports();
+  else if(activeTab==='team') app.innerHTML = renderTeam();
+  else if(activeTab==='ask') app.innerHTML = renderAsk();
+  attachHandlers();
+  hydrateNames();
+}
+
+function hydrateNames(){
+  document.querySelectorAll('[data-byid]').forEach(async el=>{
+    const id = el.dataset.byid;
+    el.textContent = await nameOf(id);
+  });
+}
+
+function renderDashboard(){
+  if(state.items.length===0) return `<div class="card empty">No items yet. Add items under "Items" to begin tracking stock.</div>`;
+  const withStatus = state.items.map(it=>({it, st:statusOf(it)}));
+  const order = {crit:0, warn:1, ok:2};
+  withStatus.sort((a,b)=> order[a.st]-order[b.st] || a.it.name.localeCompare(b.it.name));
+  const critCount = withStatus.filter(x=>x.st==='crit').length;
+  const warnCount = withStatus.filter(x=>x.st==='warn').length;
+  const exp = expiringSoon(60);
+
+  const stats = `<div class="stats-row">
+    <div class="stat-card"><div class="stat-num">📦 ${state.items.length}</div><div class="stat-label">Items tracked</div></div>
+    <div class="stat-card ${critCount?'crit':''}"><div class="stat-num">⛔ ${critCount}</div><div class="stat-label">Out of stock</div></div>
+    <div class="stat-card ${warnCount?'warn':''}"><div class="stat-num">⚠️ ${warnCount}</div><div class="stat-label">Reorder soon</div></div>
+    <div class="stat-card ${exp.length?'warn':''}"><div class="stat-num">⏳ ${exp.length}</div><div class="stat-label">Batches expiring</div></div>
+  </div>`;
+
+  const rows = withStatus.map(({it,st})=>{
+    const stock=stockOf(it.id), days=daysToStockout(it), rp=effectiveReorder(it);
+    const icon = st==='crit'?'⛔':st==='warn'?'⚠️':'✅';
+    const label = st==='crit'?'OUT OF STOCK':st==='warn'?'REORDER SOON':'OK';
+    const barColor = st==='crit'?'var(--danger)':st==='warn'?'var(--accent2)':'var(--ok)';
+    const pct = rp>0 ? Math.max(4, Math.min(100, Math.round((stock/(rp*2))*100))) : (stock>0?100:0);
+    return `<div class="item-row ${st}" data-open="${it.id}">
+      <div class="item-main">
+        <div class="item-name">💊 ${esc(it.name)} <span class="pill ${st}">${icon} ${label}</span></div>
+        <div class="item-meta">reorder at ${rp} ${esc(it.unit)} · stockout in ${fmtDays(days)}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%; background:${barColor};"></div></div>
+      </div>
+      <div class="stock-num">${stock}</div></div>`;
+  }).join('');
+
+  const expBlock = exp.length ? `<div class="card"><div class="section-label">⏳ Expiring soon · FEFO order</div>${exp.map(e=>`
+    <div class="item-row ${e.daysLeft<=14?'crit':'warn'}"><div class="item-main"><div class="item-name">💊 ${esc(e.item.name)}</div>
+    <div class="item-meta">batch ${esc(e.batch||'—')} · qty ${e.remaining} ${esc(e.item.unit)} · expires ${e.expiry}</div></div>
+    <div class="pill ${e.daysLeft<=14?'crit':'warn'}">${e.daysLeft<0?'❌ EXPIRED':'⏳ '+Math.round(e.daysLeft)+'d left'}</div></div>`).join('')}</div>` : '';
+
+  return `${stats}<div class="card"><div class="section-label">📋 Stock overview · most urgent first</div>${rows}</div>${expBlock}`;
+}
+
+function renderItems(){
+  const canEdit = myRole==='admin';
+  const rows = state.items.map(it=>`<div class="item-row">
+    <div><div class="item-name">💊 ${esc(it.name)}</div>
+    <div class="item-meta">unit: ${esc(it.unit)} · lead time: ${it.leadTimeDays||7}d · reorder pt: ${it.reorderPoint!==null && it.reorderPoint!=='' ? it.reorderPoint : '— (auto '+suggestedReorder(it)+')'}${it.barcode?` · barcode: ${esc(it.barcode)}`:''}${it.unitCost!=null?` · cost: TZS ${it.unitCost.toLocaleString(undefined,{minimumFractionDigits:2})}/${esc(it.unit)}`:''}</div></div>
+    ${canEdit?`<button class="btn secondary" data-del="${it.id}">Remove</button>`:''}
+  </div>`).join('') || `<div class="empty">No items yet.</div>`;
+  const form = canEdit ? `<div class="card"><h2>➕ Add item</h2>
+    <div class="grid">
+      <div><label>Name</label><input id="niName" placeholder="e.g. Amoxicillin 500mg"></div>
+      <div><label>Unit</label><input id="niUnit" placeholder="e.g. capsules, bottles"></div>
+      <div><label>Manual reorder point (optional)</label><input id="niReorder" type="number" placeholder="leave blank for auto"></div>
+      <div><label>Supplier lead time (days)</label><input id="niLead" type="number" value="7"></div>
+      <div><label>Barcode (optional)</label><input id="niBarcode" placeholder="scan or type code"></div>
+      <div><label>Unit cost in TZS (optional)</label><input id="niCost" type="number" step="0.01" placeholder="cost per unit, TZS"></div>
+    </div>
+    <button class="btn" id="addItemBtn">Add item</button></div>` :
+    `<div class="card hint">Only admins can add or remove items.</div>`;
+  return `${form}<div class="card"><h2>💊 All items</h2>${rows}</div>`;
+}
+
+function renderReceive(){
+  if(state.items.length===0) return `<div class="card empty">Add an item first under "Items".</div>`;
+  const opts = state.items.map(it=>`<option value="${it.id}">${esc(it.name)}</option>`).join('');
+  return `<div class="card"><h2>📥 Receive stock</h2>
+    <label>Scan or type barcode</label><input id="rcScan" placeholder="scan here, then press Enter" autocomplete="off">
+    <div class="hint" id="rcScanMsg">&nbsp;</div>
+    <div class="grid">
+      <div><label>Item</label><select id="rcItem">${opts}</select></div>
+      <div><label>Quantity received</label><input id="rcQty" type="number" min="1"></div>
+      <div><label>Batch / lot no.</label><input id="rcBatch" placeholder="optional"></div>
+      <div><label>Expiry date</label><input id="rcExpiry" type="date"></div>
+      <div><label>Supplier</label><input id="rcSupplier" placeholder="optional"></div>
+      <div><label>Date received</label><input id="rcDate" type="date" value="${todayStr()}"></div>
+    </div>
+    <button class="btn" id="recordReceiveBtn">Record receipt</button></div>
+    ${recentTxnTable('receive')}`;
+}
+function renderDispense(){
+  if(state.items.length===0) return `<div class="card empty">Add an item first under "Items".</div>`;
+  const opts = state.items.map(it=>`<option value="${it.id}">${esc(it.name)} (${stockOf(it.id)} in stock)</option>`).join('');
+  return `<div class="card"><h2>📤 Dispense</h2>
+    <label>Scan or type barcode</label><input id="dsScan" placeholder="scan here, then press Enter" autocomplete="off">
+    <div class="hint" id="dsScanMsg">&nbsp;</div>
+    <div class="grid">
+      <div><label>Item</label><select id="dsItem">${opts}</select></div>
+      <div><label>Quantity dispensed</label><input id="dsQty" type="number" min="1"></div>
+      <div><label>Patient / Rx ref</label><input id="dsRef" placeholder="optional"></div>
+      <div><label>Date</label><input id="dsDate" type="date" value="${todayStr()}"></div>
+    </div>
+    <button class="btn" id="recordDispenseBtn">Record dispense</button></div>
+    ${recentTxnTable('dispense')}`;
+}
+function recentTxnTable(type){
+  const rows = state.txns.filter(t=>t.type===type).sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,10)
+    .map(t=>{ const it=state.items.find(i=>i.id===t.itemId);
+      return `<tr><td>${t.date}</td><td>${it?'💊 '+esc(it.name):'—'}</td><td class="qty">${t.qty}</td><td>${esc(t.note||'')}</td><td data-byid="${t.by||''}">…</td></tr>`;
+    }).join('');
+  if(!rows) return '';
+  return `<div class="card"><h2>Recent ${type==='receive'?'receipts':'dispenses'}</h2>
+    <div class="overflow"><table><tr><th>Date</th><th>Item</th><th>Qty</th><th>Ref/Batch</th><th>By</th></tr>${rows}</table></div></div>`;
+}
+
+function renderBinCard(){
+  if(state.items.length===0) return `<div class="card empty">Add an item first under "Items".</div>`;
+  if(!binCardItemId) binCardItemId = state.items[0].id;
+  const opts = state.items.map(it=>`<option value="${it.id}" ${it.id===binCardItemId?'selected':''}>${esc(it.name)}</option>`).join('');
+  const item = state.items.find(i=>i.id===binCardItemId);
+  const rows = txnsOf(binCardItemId);
+  let running=0;
+  const trs = rows.map(t=>{ running += t.type==='receive'?t.qty:-t.qty;
+    return `<tr class="${t.type==='receive'?'in':'out'}"><td>${t.date}</td><td>${t.type==='receive'?'Received':'Dispensed'}</td>
+      <td class="qty">${t.type==='receive'?'+':'-'}${t.qty}</td><td>${running}</td><td>${esc(t.note||t.batch||'')}</td>
+      <td data-byid="${t.by||''}">…</td></tr>`;
+  }).join('') || `<tr><td colspan="6" style="color:var(--accent2)">No transactions yet.</td></tr>`;
+  const batches = batchesOf(item.id).filter(b=>b.remaining>0);
+  const batchRows = batches.map(b=>`<tr><td>${b.expiry||'—'}</td><td>${esc(b.batch||'—')}</td><td>${b.received}</td><td>${b.remaining}</td></tr>`).join('') || `<tr><td colspan="4" style="color:var(--accent2)">No open batches.</td></tr>`;
+  const days=daysToStockout(item), rp=effectiveReorder(item);
+  return `<div class="card"><h2>📋 Bin card</h2>
+    <label>Select item</label><select id="bcItem">${opts}</select>
+    <div class="hint">Reorder point: ${rp} ${esc(item.unit)} (${item.reorderPoint?'manual':'auto'}) · avg use: ${avgDailyUsage(item.id).toFixed(2)}/day · stockout: ${fmtDays(days)}</div>
+    <div class="btnrow no-print"><button class="btn secondary" id="exportItemCsv">Export CSV</button><button class="btn secondary" id="printBinCard">Print / Save PDF</button></div>
+  </div>
+  <div class="card"><h2>⏳ Open batches (FEFO order)</h2><div class="overflow"><table><tr><th>Expiry</th><th>Batch</th><th>Received</th><th>Remaining</th></tr>${batchRows}</table></div></div>
+  <div class="card"><div class="overflow"><table><tr><th>Date</th><th>Type</th><th>Qty</th><th>Balance</th><th>Note/Batch</th><th>By</th></tr>${trs}</table></div></div>`;
+}
+
+function renderSuggestions(){
+  const itemOpts = state.items.map(it=>`<option value="${it.id}">${esc(it.name)}</option>`).join('');
+  const form = `<div class="card"><h2>💡 Suggest a reorder</h2>
+    <div class="grid">
+      <div><label>Existing drug</label><select id="sgItem"><option value="">— choose —</option>${itemOpts}</select></div>
+      <div><label>Or new drug name (not yet listed)</label><input id="sgNewName" placeholder="e.g. Paracetamol 500mg"></div>
+      <div><label>Suggested quantity</label><input id="sgQty" type="number" min="1"></div>
+      <div><label>Est. unit cost in TZS (only if new drug)</label><input id="sgNewCost" type="number" step="0.01" placeholder="cost per unit, TZS"></div>
+      <div><label>Reason (optional)</label><input id="sgReason" placeholder="e.g. running low, seasonal demand"></div>
+    </div>
+    <div class="hint" id="sgCostPreview">Estimated cost: —</div>
+    <button class="btn" id="submitSuggestionBtn">Submit suggestion</button>
+    <div class="hint">This won't change stock — it just flags a recommendation for the pharmacist to review.</div></div>`;
+
+  const pending = state.suggestions.filter(s=>s.status==='pending').sort((a,b)=>(b.estimatedCost||0)-(a.estimatedCost||0));
+  const resolved = state.suggestions.filter(s=>s.status!=='pending').sort((a,b)=>new Date(b.ts)-new Date(a.ts)).slice(0,15);
+  const pendingTotal = pending.reduce((s,x)=>s+(x.estimatedCost||0),0);
+
+  function row(s){
+    const label = s.itemName ? '💊 '+esc(s.itemName)+' <span class="hint" style="display:inline">(new)</span>' : '💊 '+esc(state.items.find(i=>i.id===s.itemId)?.name || 'Unknown item');
+    const pill = s.status==='pending' ? '<span class="pill warn">🕓 PENDING</span>' : s.status==='approved' ? '<span class="pill ok">✅ APPROVED</span>' : '<span class="pill crit">❌ REJECTED</span>';
+    const costStr = s.estimatedCost!=null ? `TZS ${s.estimatedCost.toLocaleString(undefined,{minimumFractionDigits:2})} est. cost` : 'cost unknown';
+    const actions = (myRole==='admin' && s.status==='pending') ? `<div class="btnrow">
+      <button class="btn" data-approve="${s.id}">Approve</button>
+      <button class="btn secondary" data-reject="${s.id}">Reject</button></div>` : '';
+    return `<div class="item-row ${s.status==='pending'?'warn':s.status==='approved'?'ok':'crit'}">
+      <div class="item-main"><div class="item-name">${label} ${pill}</div>
+      <div class="item-meta">qty: ${s.qty} · ${costStr} · ${esc(s.reason||'no reason given')} · by <span data-byid="${s.by}">…</span></div>
+      ${actions}</div></div>`;
+  }
+  return `${form}
+  <div class="card"><div class="section-label">Pending (${pending.length}) · total est. cost TZS ${pendingTotal.toLocaleString(undefined,{minimumFractionDigits:2})}</div>${pending.map(row).join('') || '<div class="hint">Nothing pending.</div>'}</div>
+  <div class="card"><div class="section-label">Recently resolved</div>${resolved.map(row).join('') || '<div class="hint">Nothing resolved yet.</div>'}</div>`;
+}
+
+function renderReports(){
+  return `<div class="card"><h2>📊 Reports</h2>
+    <p class="hint">Export current stock levels, or the full transaction/audit log.</p>
+    <div class="btnrow">
+      <button class="btn" id="exportStockCsv">Export stock summary (CSV)</button>
+      <button class="btn secondary" id="exportAuditCsv">Export audit log (CSV)</button>
+      <button class="btn secondary" id="printReport">Print / Save PDF (stock summary)</button>
+    </div></div>
+  <div class="card overflow"><h2>Stock summary preview</h2>
+    <table><tr><th>Item</th><th>Stock</th><th>Reorder pt</th><th>Status</th><th>Stockout est.</th></tr>
+    ${state.items.map(it=>`<tr><td>${esc(it.name)}</td><td>${stockOf(it.id)}</td><td>${effectiveReorder(it)}</td><td>${statusOf(it)}</td><td>${fmtDays(daysToStockout(it))}</td></tr>`).join('')}
+    </table></div>`;
+}
+
+function renderAsk(){
+  if(!sampleApi) return `<div class="card empty">Ask isn't available in this view.</div>`;
+  return `<div class="card"><h2>💬 Ask about your stock</h2>
+    <div class="hint">Ask in plain language, e.g. "which items are expiring this month?" or "what should I prioritize reordering?"</div>
+    <input id="askInput" placeholder="Type your question…">
+    <button class="btn" id="askBtn">Ask</button>
+    <div id="askAnswer" class="hint" style="margin-top:12px; white-space:pre-wrap;"></div>
+  </div>`;
+}
+function buildStockContext(){
+  const lines = state.items.map(it=>{
+    const stock=stockOf(it.id), rp=effectiveReorder(it), days=daysToStockout(it), st=statusOf(it);
+    return `- ${it.name}: stock=${stock} ${it.unit}, reorder_point=${rp}, status=${st}, est_days_to_stockout=${days!==null?Math.round(days):'unknown'}${it.unitCost!=null?', unit_cost_TZS='+it.unitCost:''}`;
+  }).join('\n');
+  const exp = expiringSoon(90).map(e=>`- ${e.item.name}: batch ${e.batch||'—'}, qty ${e.remaining}, expires ${e.expiry} (${Math.round(e.daysLeft)}d)`).join('\n');
+  const pend = state.suggestions.filter(s=>s.status==='pending').map(s=>{
+    const nm = s.itemName || state.items.find(i=>i.id===s.itemId)?.name || 'unknown';
+    return `- ${nm}: qty ${s.qty}${s.estimatedCost!=null?', est_cost_TZS='+s.estimatedCost:''}, reason: ${s.reason||'none'}`;
+  }).join('\n');
+  return `CURRENT STOCK:\n${lines||'(no items yet)'}\n\nEXPIRING BATCHES (next 90 days):\n${exp||'(none)'}\n\nPENDING REORDER SUGGESTIONS:\n${pend||'(none)'}`;
+}
+
+function renderTeam(){
+
+  if(myRole!=='admin') return `<div class="card empty">Admins only.</div>`;
+  const rows = state.roles.map(r=>`<div class="item-row" style="flex-wrap:wrap;">
+    <div style="flex:1; min-width:150px;"><div class="item-name" data-byid="${r.id}">…</div>
+      <div class="item-meta">${r.id===myId?'(you) · ':''}account name shown unless a nickname is set below</div>
+      <input data-nickname="${r.id}" placeholder="custom nickname (optional)" value="${esc(r.nickname||'')}" style="max-width:220px; margin-top:6px;">
+    </div>
+    <select data-roleid="${r.id}" ${r.id===myId?'disabled':''}>
+      <option value="staff" ${r.role==='staff'?'selected':''}>Staff</option>
+      <option value="admin" ${r.role==='admin'?'selected':''}>Admin</option>
+    </select></div>`).join('');
+  return `<div class="card"><h2>👥 Team & roles</h2>
+    <div class="hint">Staff can receive/dispense and view reports. Admins can also manage items and roles. Names come from each person's account — set a nickname if you'd rather see something else here.</div>
+    ${rows}</div>
+  <div class="card"><h2>🧾 Audit log</h2>
+    <div class="overflow"><table><tr><th>When</th><th>Action</th><th>Detail</th><th>By</th></tr>
+    ${state.audit.slice().sort((a,b)=>new Date(b.ts)-new Date(a.ts)).slice(0,50).map(a=>`<tr><td>${new Date(a.ts).toLocaleString()}</td><td>${esc(a.action)}</td><td>${esc(a.detail||'')}</td><td data-byid="${a.by||''}">…</td></tr>`).join('')}
+    </table></div></div>`;
+}
+
+function toCsv(rows){ return rows.map(r=>r.map(c=>`"${String(c??'').replace(/"/g,'""')}"`).join(',')).join('\n'); }
+async function doExport(filename, csv){
+  if(downloads){ try{ await downloads.save({filename, data: csv}); return; }catch(e){} }
+  const blob = new Blob([csv], {type:'text/csv'}); const url = URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url);
+}
+
+function attachHandlers(){
+  const addItemBtn = document.getElementById('addItemBtn');
+  if(addItemBtn) addItemBtn.onclick = async ()=>{
+    const name = document.getElementById('niName').value.trim(); if(!name) return;
+    const unit = document.getElementById('niUnit').value.trim() || 'units';
+    const reorderRaw = document.getElementById('niReorder').value;
+    const lead = Number(document.getElementById('niLead').value)||7;
+    await db.collection('items').add({name, unit, reorderPoint: reorderRaw===''?null:Number(reorderRaw), leadTimeDays:lead, barcode: document.getElementById('niBarcode').value.trim()||null, unitCost: document.getElementById('niCost').value===''?null:Number(document.getElementById('niCost').value)});
+    logAudit('item_added', name);
+  };
+  document.querySelectorAll('[data-del]').forEach(b=> b.onclick = async ()=>{
+    const id=b.dataset.del; const it=state.items.find(i=>i.id===id);
+    if(!(await customConfirm('Remove this item and its transaction history?'))) return;
+    await db.collection('items').doc(id).delete();
+    for(const t of state.txns.filter(t=>t.itemId===id)){ await db.collection('txns').doc(t.id).delete(); }
+    logAudit('item_removed', it?it.name:id);
+  });
+  document.querySelectorAll('[data-open]').forEach(row=> row.onclick = ()=>{ binCardItemId=row.dataset.open; activeTab='binCard'; render(); });
+
+  const recBtn = document.getElementById('recordReceiveBtn');
+  if(recBtn) recBtn.onclick = async ()=>{
+    const itemId=document.getElementById('rcItem').value, qty=Number(document.getElementById('rcQty').value);
+    if(!qty||qty<=0) return;
+    const date=document.getElementById('rcDate').value||todayStr(), batch=document.getElementById('rcBatch').value.trim();
+    const supplier=document.getElementById('rcSupplier').value.trim(), expiry=document.getElementById('rcExpiry').value;
+    const note=[batch?('Batch '+batch):'', supplier, expiry?('exp '+expiry):''].filter(Boolean).join(' · ');
+    await db.collection('txns').add({itemId, type:'receive', qty, date, batch, expiry, note, by:myId});
+    const it=state.items.find(i=>i.id===itemId); logAudit('stock_received', `${it?it.name:''} +${qty}`);
+  };
+  const dsBtn = document.getElementById('recordDispenseBtn');
+  if(dsBtn) dsBtn.onclick = async ()=>{
+    const itemId=document.getElementById('dsItem').value, qty=Number(document.getElementById('dsQty').value);
+    if(!qty||qty<=0) return;
+    const stock=stockOf(itemId);
+    if(qty>stock && !(await customConfirm(`Only ${stock} in stock. Record anyway?`))) return;
+    const date=document.getElementById('dsDate').value||todayStr(), ref=document.getElementById('dsRef').value.trim();
+    await db.collection('txns').add({itemId, type:'dispense', qty, date, note:ref, by:myId});
+    const it=state.items.find(i=>i.id===itemId); logAudit('stock_dispensed', `${it?it.name:''} -${qty}${ref?(' ('+ref+')'):''}`);
+  };
+  const bcSel = document.getElementById('bcItem');
+  if(bcSel) bcSel.onchange = ()=>{ binCardItemId=bcSel.value; render(); };
+
+  function wireScan(inputId, selectId, msgId, qtyId){
+    const input = document.getElementById(inputId);
+    if(!input) return;
+    input.focus();
+    input.addEventListener('keydown', e=>{
+      if(e.key!=='Enter') return;
+      e.preventDefault();
+      const code = input.value.trim(); input.value='';
+      const msg = document.getElementById(msgId);
+      if(!code){ return; }
+      const match = state.items.find(it=> it.barcode && it.barcode===code);
+      if(match){
+        document.getElementById(selectId).value = match.id;
+        msg.textContent = `Matched: ${match.name}`; msg.style.color='var(--ok)';
+        const q = document.getElementById(qtyId); if(q) q.focus();
+      } else {
+        msg.textContent = `No item has barcode "${code}" yet — add it under Items, or select manually.`;
+        msg.style.color='var(--danger)';
+      }
+    });
+  }
+  wireScan('rcScan','rcItem','rcScanMsg','rcQty');
+  wireScan('dsScan','dsItem','dsScanMsg','dsQty');
+
+  const sgBtn = document.getElementById('submitSuggestionBtn');
+  function computeSgCost(){
+    const itemId = document.getElementById('sgItem').value;
+    const qty = Number(document.getElementById('sgQty').value)||0;
+    const newCost = document.getElementById('sgNewCost').value;
+    let unitCost = null;
+    if(itemId){ const it=state.items.find(i=>i.id===itemId); unitCost = (it && it.unitCost!=null) ? it.unitCost : null; }
+    else if(newCost!=='') unitCost = Number(newCost);
+    const preview = document.getElementById('sgCostPreview');
+    if(unitCost!=null && qty>0){ preview.textContent = `Estimated cost: TZS ${(unitCost*qty).toLocaleString(undefined,{minimumFractionDigits:2})}`; return unitCost; }
+    preview.textContent = 'Estimated cost: — (unit cost unknown)';
+    return null;
+  }
+  ['sgItem','sgQty','sgNewCost'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('input', computeSgCost); if(el) el.addEventListener('change', computeSgCost); });
+  if(sgBtn) sgBtn.onclick = async ()=>{
+    const itemId = document.getElementById('sgItem').value;
+    const newName = document.getElementById('sgNewName').value.trim();
+    const qty = Number(document.getElementById('sgQty').value);
+    const reason = document.getElementById('sgReason').value.trim();
+    if(!qty || qty<=0 || (!itemId && !newName)){ await customAlert('Pick a drug (or name a new one) and a quantity.'); return; }
+    const unitCost = computeSgCost();
+    const doc = {qty, reason, status:'pending', by:myId, ts:new Date().toISOString(), unitCost, estimatedCost: unitCost!=null? unitCost*qty : null};
+    if(itemId) doc.itemId = itemId; else doc.itemName = newName;
+    await db.collection('suggestions').add(doc);
+    const label = itemId ? (state.items.find(i=>i.id===itemId)?.name) : newName;
+    logAudit('suggestion_submitted', `${label} x${qty}`);
+  };
+  document.querySelectorAll('[data-approve]').forEach(b=> b.onclick = async ()=>{
+    const id = b.dataset.approve; const s = state.suggestions.find(x=>x.id===id);
+    await db.collection('suggestions').doc(id).set({...s, status:'approved', resolvedBy:myId, resolvedTs:new Date().toISOString()});
+    logAudit('suggestion_approved', s.itemName || state.items.find(i=>i.id===s.itemId)?.name || '');
+  });
+  document.querySelectorAll('[data-reject]').forEach(b=> b.onclick = async ()=>{
+    const id = b.dataset.reject; const s = state.suggestions.find(x=>x.id===id);
+    await db.collection('suggestions').doc(id).set({...s, status:'rejected', resolvedBy:myId, resolvedTs:new Date().toISOString()});
+    logAudit('suggestion_rejected', s.itemName || state.items.find(i=>i.id===s.itemId)?.name || '');
+  });
+
+  document.querySelectorAll('[data-roleid]').forEach(sel=> sel.onchange = async ()=>{
+    const id=sel.dataset.roleid, role=sel.value;
+    const existing = state.roles.find(r=>r.id===id);
+    await db.collection('roles').doc(id).set({role, nickname: existing?.nickname||null});
+    logAudit('role_changed', `${id} -> ${role}`);
+  });
+  document.querySelectorAll('[data-nickname]').forEach(inp=> inp.addEventListener('change', async ()=>{
+    const id = inp.dataset.nickname;
+    const existing = state.roles.find(r=>r.id===id);
+    const nickname = inp.value.trim() || null;
+    await db.collection('roles').doc(id).set({role: existing?.role||'staff', nickname});
+    logAudit('nickname_set', `${id} -> ${nickname||'(cleared)'}`);
+  }));
+
+  const exStock = document.getElementById('exportStockCsv');
+  if(exStock) exStock.onclick = ()=>{
+    const rows=[['Item','Stock','Unit','Reorder Point','Status','Est. Stockout (days)','Unit Cost (TZS)']];
+    state.items.forEach(it=> rows.push([it.name, stockOf(it.id), it.unit, effectiveReorder(it), statusOf(it), daysToStockout(it)!==null?Math.round(daysToStockout(it)):'', it.unitCost!=null?'TZS '+it.unitCost.toFixed(2):'']));
+    doExport('stock-summary.csv', toCsv(rows));
+  };
+  const exAudit = document.getElementById('exportAuditCsv');
+  if(exAudit) exAudit.onclick = ()=>{
+    const rows=[['When','Action','Detail','By (id)']];
+    state.audit.forEach(a=> rows.push([a.ts, a.action, a.detail||'', a.by||'']));
+    doExport('audit-log.csv', toCsv(rows));
+  };
+  const exItem = document.getElementById('exportItemCsv');
+  if(exItem) exItem.onclick = ()=>{
+    const item=state.items.find(i=>i.id===binCardItemId);
+    const rows=[['Date','Type','Qty','Note/Batch']];
+    txnsOf(binCardItemId).forEach(t=> rows.push([t.date, t.type, t.qty, t.note||t.batch||'']));
+    doExport(`bincard-${item.name}.csv`, toCsv(rows));
+  };
+  const pr1=document.getElementById('printBinCard'); if(pr1) pr1.onclick=()=>window.print();
+  const pr2=document.getElementById('printReport'); if(pr2) pr2.onclick=()=>window.print();
+
+  const askBtn = document.getElementById('askBtn');
+  if(askBtn) askBtn.onclick = async ()=>{
+    const q = document.getElementById('askInput').value.trim();
+    const out = document.getElementById('askAnswer');
+    if(!q || !sampleApi) return;
+    out.textContent = 'Thinking…';
+    try{
+      const res = await sampleApi(`You are a pharmacy inventory assistant. Answer only using the data below; if the data doesn't cover the question, say so.\n\n${buildStockContext()}\n\nQuestion: ${q}`, {modelTier:'quick'});
+      out.textContent = res.text;
+    }catch(e){ out.textContent = 'Could not get an answer right now (' + (e.code||'error') + ').'; }
+  };
+}
+
+render();
+init();
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./service-worker.js').catch(()=>{}); });
+}
+</script>
+</body>
+</html>
