@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIB Pharmacy Manager</title>
+    <style>
+        :root {
+            --primary: #0284c7;
+            --primary-dark: #0369a1;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background-color: var(--card);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .brand-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        select, input, button {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--primary-dark);
+        }
+
+        /* Nav Tabs with Bottom Line Indicator */
+        nav {
+            background-color: var(--card);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            padding: 0 2rem;
+            gap: 1.5rem;
+        }
+
+        .nav-tab {
+            padding: 0.85rem 0.5rem;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-weight: 600;
+            cursor: pointer;
+            position: relative;
+            border-radius: 0;
+        }
+
+        .nav-tab:hover {
+            background: none;
+            color: var(--primary);
+        }
+
+        .nav-tab.active {
+            color: var(--primary);
+        }
+
+        /* Active Tab Indicator Line */
+        .nav-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: var(--primary);
+            border-radius: 3px 3px 0 0;
+        }
+
+        main {
+            padding: 2rem;
+            max-width: 1100px;
+            margin: 0 auto;
+            width: 100%;
+            flex: 1;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .card h2 {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            color: var(--text);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .form-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        /* Disabled state for non-admin restrictions */
+        .restricted-disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-admin { background: #dbeafe; color: #1e40af; }
+        .badge-staff { background: #f3f4f6; color: #374151; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        th {
+            background-color: #f1f5f9;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .masked-info {
+            filter: blur(4px);
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand-title">MIB Pharmacy Manager</div>
+        
+        <div class="header-controls">
+            <!-- Language Selector -->
+            <select id="langSelect" onchange="changeLanguage(this.value)">
+                <option value="en">English</option>
+                <option value="sw">Kiswahili</option>
+            </select>
+
+            <!-- Role Selector (Admin vs Staff) -->
+            <select id="roleSelect" onchange="changeRole(this.value)">
+                <option value="admin">Role: Admin</option>
+                <option value="staff">Role: Standard Staff</option>
+            </select>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs with Bottom Line Indicator -->
+    <nav>
+        <button class="nav-tab active" data-lang-key="tabUser" onclick="switchTab('userTab', this)">User Profile</button>
+        <button class="nav-tab" data-lang-key="tabRegister" onclick="switchTab('registerTab', this)">Receive Items</button>
+        <button class="nav-tab" data-lang-key="tabDispense" onclick="switchTab('dispenseTab', this)">Dispense (Patient)</button>
+    </nav>
+
+    <main>
+        <!-- TAB 1: User Info & Permissions -->
+        <section id="userTab" class="tab-content active">
+            <div class="card">
+                <h2 data-lang-key="userTitle">User Registration & Details</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label data-lang-key="lblFullName">Full Name</label>
+                        <input type="text" id="userName" placeholder="e.g. Jane Doe">
+                    </div>
+                    <div class="form-group">
+                        <label data-lang-key="lblPhone">Phone Number</label>
+                        <input type="tel" id="userPhone" placeholder="e.g. +255 700 000 000">
+                    </div>
+                </div>
+                <button onclick="saveUserProfile()" data-lang-key="btnSaveProfile">Save Info</button>
+            </div>
+
+            <div class="card">
+                <h2 data-lang-key="adminControlTitle">Admin Privacy Controls</h2>
+                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+                    <input type="checkbox" id="maskSensitiveToggle" onchange="toggleMasking(this.checked)">
+                    <span data-lang-key="chkMask">Hide sensitive patient details (Names, Contacts) from Standard Staff</span>
+                </label>
+            </div>
+        </section>
+
+        <!-- TAB 2: Receive/Register Items (Admin Restrictable) -->
+        <section id="registerTab" class="tab-content">
+            <div class="card" id="receiveCardBlock">
+                <h2 data-lang-key="regTitle">Register / Receive New Inventory</h2>
+                <p id="adminNotice" style="color: var(--danger); font-size: 0.85rem; display: none; margin-bottom: 1rem;" data-lang-key="msgRestricted">
+                    Access Restricted: Only Administrators are permitted to register or receive items.
+                </p>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label data-lang-key="lblItemName">Item / Drug Name</label>
+                        <input type="text" id="itemName" placeholder="e.g. Paracetamol 500mg" class="admin-input">
+                    </div>
+                    <div class="form-group">
+                        <label data-lang-key="lblBatch">Batch Number</label>
+                        <input type="text" id="itemBatch" placeholder="e.g. BATCH-992" class="admin-input">
+                    </div>
+                    <div class="form-group">
+                        <label data-lang-key="lblQty">Quantity Received</label>
+                        <input type="number" id="itemQty" placeholder="100" class="admin-input">
+                    </div>
+                </div>
+                <button id="btnReceive" onclick="addInventory()" class="admin-input" data-lang-key="btnReceive">Add to Stock</button>
+            </div>
+        </section>
+
+        <!-- TAB 3: Patient Dispensing & Lookup -->
+        <section id="dispenseTab" class="tab-content">
+            <div class="card">
+                <h2 data-lang-key="dispenseTitle">Dispense Medication to Patient</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label data-lang-key="lblPatientReg">Patient Registration No.</label>
+                        <input type="text" id="patientReg" placeholder="e.g. REG-2026-0081">
+                    </div>
+                    <div class="form-group">
+                        <label data-lang-key="lblDispenseDrug">Select Item</label>
+                        <select id="dispenseDrug">
+                            <option value="Paracetamol">Paracetamol 500mg</option>
+                            <option value="Amoxicillin">Amoxicillin 250mg</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label data-lang-key="lblDispenseQty">Quantity</label>
+                        <input type="number" id="dispenseQty" placeholder="10">
+                    </div>
+                </div>
+                <button onclick="dispenseItem()" data-lang-key="btnDispense">Dispense Item</button>
+            </div>
+
+            <!-- Patient Activity Log / Records -->
+            <div class="card">
+                <h2 data-lang-key="recordsTitle">Dispensing Logs & Patient Reference</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th data-lang-key="thRegNo">Patient Reg No.</th>
+                            <th data-lang-key="thPatientName">Patient Name</th>
+                            <th data-lang-key="thItem">Item Dispensed</th>
+                            <th data-lang-key="thQty">Qty</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dispenseLogBody">
+                        <tr>
+                            <td>REG-2026-0012</td>
+                            <td><span class="patient-name">John Swai</span></td>
+                            <td>Paracetamol 500mg</td>
+                            <td>20</td>
+                        </tr>
+                        <tr>
+                            <td>REG-2026-0045</td>
+                            <td><span class="patient-name">Amina Juma</span></td>
+                            <td>Amoxicillin 250mg</td>
+                            <td>15</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Language Translations Object
+        const translations = {
+            en: {
+                tabUser: "User Profile",
+                tabRegister: "Receive Items",
+                tabDispense: "Dispense (Patient)",
+                userTitle: "User Registration & Details",
+                lblFullName: "Full Name",
+                lblPhone: "Phone Number",
+                btnSaveProfile: "Save Info",
+                adminControlTitle: "Admin Privacy Controls",
+                chkMask: "Hide sensitive patient details (Names, Contacts) from Standard Staff",
+                regTitle: "Register / Receive New Inventory",
+                msgRestricted: "Access Restricted: Only Administrators are permitted to register or receive items.",
+                lblItemName: "Item / Drug Name",
+                lblBatch: "Batch Number",
+                lblQty: "Quantity Received",
+                btnReceive: "Add to Stock",
+                dispenseTitle: "Dispense Medication to Patient",
+                lblPatientReg: "Patient Registration No.",
+                lblDispenseDrug: "Select Item",
+                lblDispenseQty: "Quantity",
+                btnDispense: "Dispense Item",
+                recordsTitle: "Dispensing Logs & Patient Reference",
+                thRegNo: "Patient Reg No.",
+                thPatientName: "Patient Name",
+                thItem: "Item Dispensed",
+                thQty: "Qty"
+            },
+            sw: {
+                tabUser: "Wasifu wa Mtumiaji",
+                tabRegister: "Pokea Bidhaa",
+                tabDispense: "Toa Dawa (Mgonjwa)",
+                userTitle: "Usajili na Maelezo ya Mtumiaji",
+                lblFullName: "Jina Bufulo",
+                lblPhone: "Nambari ya Simu",
+                btnSaveProfile: "Hifadhi Taarifa",
+                adminControlTitle: "Udhibiti wa Faragha wa Admin",
+                chkMask: "Ficha taarifa nyeti za mgonjwa (Majina, Simu) kwa Wafanyakazi wa Kawaida",
+                regTitle: "Sajili / Pokea Inventori Mpya",
+                msgRestricted: "Ufikiaji Unazuiliwa: Wasimamizi (Admin) tu ndio wanaoruhusiwa kusajili au kupokea bidhaa.",
+                lblItemName: "Jina la Dawa / Bidhaa",
+                lblBatch: "Namba ya Bachi (Batch)",
+                lblQty: "Idadi Iliyopokelewa",
+                btnReceive: "Ongeza Kwenye Stoki",
+                dispenseTitle: "Gawa Dawa kwa Mgonjwa",
+                lblPatientReg: "Namba ya Usajili ya Mgonjwa",
+                lblDispenseDrug: "Chagua Bidhaa",
+                lblDispenseQty: "Idadi",
+                btnDispense: "Toa Dawa",
+                recordsTitle: "Kumbukumbu za Ugawaji na Marejeleo ya Mgonjwa",
+                thRegNo: "Namba ya Usajili",
+                thPatientName: "Jina la Mgonjwa",
+                thItem: "Dawa Iliyotolewa",
+                thQty: "Idadi"
+            }
+        };
+
+        let currentRole = 'admin';
+        let currentLang = 'en';
+        let maskPatientData = false;
+
+        // Switch Navigation Tabs
+        function switchTab(tabId, element) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            element.classList.add('active');
+        }
+
+        // Change Language System-wide
+        function changeLanguage(lang) {
+            currentLang = lang;
+            document.querySelectorAll('[data-lang-key]').forEach(el => {
+                const key = el.getAttribute('data-lang-key');
+                if (translations[lang] && translations[lang][key]) {
+                    el.textContent = translations[lang][key];
+                }
+            });
+        }
+
+        // Role Permission Control (Admin vs Standard Staff)
+        function changeRole(role) {
+            currentRole = role;
+            const receiveBlock = document.getElementById('receiveCardBlock');
+            const adminNotice = document.getElementById('adminNotice');
+            const adminInputs = document.querySelectorAll('.admin-input');
+
+            if (role === 'staff') {
+                adminNotice.style.display = 'block';
+                adminInputs.forEach(input => input.disabled = true);
+                receiveBlock.classList.add('restricted-disabled');
+            } else {
+                adminNotice.style.display = 'none';
+                adminInputs.forEach(input => input.disabled = false);
+                receiveBlock.classList.remove('restricted-disabled');
+            }
+
+            applyPrivacyMasking();
+        }
+
+        // Toggle Masking Sensitive Information
+        function toggleMasking(checked) {
+            maskPatientData = checked;
+            applyPrivacyMasking();
+        }
+
+        function applyPrivacyMasking() {
+            const patientNames = document.querySelectorAll('.patient-name');
+            patientNames.forEach(el => {
+                if (maskPatientData && currentRole === 'staff') {
+                    el.classList.add('masked-info');
+                } else {
+                    el.classList.remove('masked-info');
+                }
+            });
+        }
+
+        // Actions
+        function saveUserProfile() {
+            const name = document.getElementById('userName').value;
+            const phone = document.getElementById('userPhone').value;
+            if(!name || !phone) {
+                alert(currentLang === 'en' ? 'Please fill in both fields.' : 'Tafadhali jaza nafasi zote mbili.');
+                return;
+            }
+            alert(currentLang === 'en' ? 'User profile saved successfully!' : 'Wasifu wa mtumiaji umehifadhiwa kikamilifu!');
+        }
+
+        function addInventory() {
+            if(currentRole !== 'admin') return;
+            const item = document.getElementById('itemName').value;
+            if(!item) return;
+            alert((currentLang === 'en' ? 'Added to inventory: ' : 'Imeongezwa kwenye stoki: ') + item);
+            document.getElementById('itemName').value = '';
+            document.getElementById('itemBatch').value = '';
+            document.getElementById('itemQty').value = '';
+        }
+
+        function dispenseItem() {
+            const reg = document.getElementById('patientReg').value;
+            const drug = document.getElementById('dispenseDrug').value;
+            const qty = document.getElementById('dispenseQty').value;
+
+            if(!reg || !qty) {
+                alert(currentLang === 'en' ? 'Please fill all required fields.' : 'Tafadhali jaza sehemu zote zinazohitajika.');
+                return;
+            }
+
+            const tbody = document.getElementById('dispenseLogBody');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${reg}</td>
+                <td><span class="patient-name">Patient (${reg})</span></td>
+                <td>${drug}</td>
+                <td>${qty}</td>
+            `;
+            tbody.prepend(row);
+
+            applyPrivacyMasking();
+            alert(currentLang === 'en' ? 'Dispensed successfully!' : 'Imetolewa kikamilifu!');
+            document.getElementById('patientReg').value = '';
+            document.getElementById('dispenseQty').value = '';
+        }
+    </script>
+</body>
+</html>
